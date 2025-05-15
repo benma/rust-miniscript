@@ -139,6 +139,13 @@ impl<Pk: MiniscriptKey> Wsh<Pk> {
         };
         Ok(Wsh { inner })
     }
+
+    pub fn iter_pk(&self) -> Box<dyn Iterator<Item = Pk> + '_> {
+        match &self.inner {
+            WshInner::SortedMulti(smv) => Box::new(smv.iter_pk()),
+            WshInner::Ms(ms) => Box::new(ms.iter_pk()),
+        }
+    }
 }
 
 impl<Pk: MiniscriptKey + ToPublicKey> Wsh<Pk> {
@@ -369,6 +376,8 @@ impl<Pk: MiniscriptKey> Wpkh<Pk> {
             Err(e) => Err(TranslateErr::OuterError(Error::from(e))),
         }
     }
+
+    pub fn iter_pk(&self) -> core::iter::Once<Pk> { core::iter::once(self.pk.clone()) }
 }
 
 impl<Pk: MiniscriptKey + ToPublicKey> Wpkh<Pk> {

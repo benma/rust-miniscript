@@ -267,6 +267,15 @@ impl<Pk: MiniscriptKey> Sh<Pk> {
         };
         Ok(Sh { inner })
     }
+
+    pub fn iter_pk(&self) -> Box<dyn Iterator<Item = Pk> + '_> {
+        match &self.inner {
+            ShInner::Wsh(wsh) => Box::new(wsh.iter_pk()),
+            ShInner::Wpkh(wpkh) => Box::new(wpkh.iter_pk()),
+            ShInner::SortedMulti(smv) => Box::new(smv.iter_pk()),
+            ShInner::Ms(ms) => Box::new(ms.iter_pk()),
+        }
+    }
 }
 
 impl<Pk: MiniscriptKey + ToPublicKey> Sh<Pk> {

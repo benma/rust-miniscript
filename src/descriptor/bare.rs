@@ -99,6 +99,8 @@ impl<Pk: MiniscriptKey> Bare<Pk> {
     {
         Bare::new(self.ms.translate_pk(t)?).map_err(TranslateErr::OuterError)
     }
+
+    pub fn iter_pk(&self) -> impl Iterator<Item = Pk> + '_ { self.ms.iter_pk() }
 }
 
 impl<Pk: MiniscriptKey + ToPublicKey> Bare<Pk> {
@@ -263,6 +265,8 @@ impl<Pk: MiniscriptKey> Pkh<Pk> {
             Err(e) => Err(TranslateErr::OuterError(Error::from(e))),
         }
     }
+
+    pub fn iter_pk(&self) -> impl Iterator<Item = Pk> + '_ { core::iter::once(self.pk.clone()) }
 }
 
 impl<Pk: MiniscriptKey + ToPublicKey> Pkh<Pk> {

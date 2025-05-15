@@ -412,6 +412,17 @@ impl<Pk: MiniscriptKey> Descriptor<Pk> {
         };
         Ok(desc)
     }
+
+    pub fn iter_pk(&self) -> Box<dyn Iterator<Item = Pk> + '_> {
+        match self {
+            Descriptor::Bare(bare) => Box::new(bare.iter_pk()),
+            Descriptor::Pkh(pk) => Box::new(pk.iter_pk()),
+            Descriptor::Wpkh(pk) => Box::new(pk.iter_pk()),
+            Descriptor::Sh(sh) => Box::new(sh.iter_pk()),
+            Descriptor::Wsh(wsh) => Box::new(wsh.iter_pk()),
+            Descriptor::Tr(tr) => Box::new(tr.iter_pk()),
+        }
+    }
 }
 
 impl<Pk: MiniscriptKey + ToPublicKey> Descriptor<Pk> {
@@ -2236,5 +2247,27 @@ pk(03f28773c2d975288bc7d1d205c3748651b075fbc6610e58cddeeddf8f19405aa8))";
             .expect("infallible");
 
         assert_eq!(xonly_pk_descriptor.to_string(), xonly_converted_descriptor.to_string());
+    }
+
+    #[test]
+    fn test_iter_pk() {
+        let descriptor: Descriptor<String> = Descriptor::from_str("pkh(A)").unwrap();
+        assert_eq!(descriptor.iter_pk().collect::<Vec<String>>(), vec!["A".to_string()]);
+
+        let descriptor: Descriptor<String> = Descriptor::from_str("wpkh(A)").unwrap();
+        assert_eq!(descriptor.iter_pk().collect::<Vec<String>>(), vec!["A".to_string()]);
+
+        let descriptor: Descriptor<String> = Descriptor::from_str("tr(A,{pk(B),pk(C)})").unwrap();
+        assert_eq!(
+            descriptor.iter_pk().collect::<Vec<String>>(),
+            vec!["A".to_string(), "B".to_string(), "C".to_string()]
+        );
+
+        let descriptor: Descriptor<String> =
+            Descriptor::from_str("wsh(sortedmulti(2,A,B,C))").unwrap();
+        assert_eq!(
+            descriptor.iter_pk().collect::<Vec<String>>(),
+            vec!["A".to_string(), "B".to_string(), "C".to_string()]
+        );
     }
 }
