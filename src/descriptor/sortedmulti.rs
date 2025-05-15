@@ -92,6 +92,8 @@ impl<Pk: MiniscriptKey, Ctx: ScriptContext> SortedMultiVec<Pk, Ctx> {
         ret.constructor_check().map_err(TranslateErr::OuterError)
     }
 
+    pub fn iter_pk(&self) -> impl Iterator<Item = Pk> + '_ { self.inner.data().iter().cloned() }
+
     /// The threshold value for the multisig.
     pub fn k(&self) -> usize { self.inner.k() }
 

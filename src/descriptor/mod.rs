@@ -412,7 +412,42 @@ impl<Pk: MiniscriptKey> Descriptor<Pk> {
         };
         Ok(desc)
     }
+
+    pub fn iter_pk<'a>(&'a self) -> PkIter<'a, Pk> {
+        let iterator: Box<dyn Iterator<Item = Pk> + 'a> = match self {
+            Descriptor::Bare(bare) => Box::new(bare.iter_pk()),
+            Descriptor::Pkh(pk) => Box::new(pk.iter_pk()),
+            Descriptor::Wpkh(pk) => Box::new(pk.iter_pk()),
+            Descriptor::Sh(sh) => Box::new(sh.iter_pk()),
+            Descriptor::Wsh(wsh) => Box::new(wsh.iter_pk()),
+            Descriptor::Tr(tr) => Box::new(tr.iter_pk()),
+        };
+        let remaining: usize = todo!("pre-compute number of keys");
+        PkIter { iterator, remaining }
+    }
 }
+
+pub struct PkIter<'a, Pk: MiniscriptKey> {
+    iterator: Box<dyn Iterator<Item = Pk> + 'a>,
+    remaining: usize,
+}
+
+impl<Pk: MiniscriptKey> Iterator for PkIter<'_, Pk> {
+    type Item = Pk;
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+        match self.iterator.next() {
+            item @ Some(_) => {
+                self.remaining -= 1;
+                item
+            }
+            None => None,
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) { (self.remaining, Some(self.remaining)) }
+}
+
+impl<Pk: MiniscriptKey> ExactSizeIterator for PkIter<'_, Pk> {}
 
 impl<Pk: MiniscriptKey + ToPublicKey> Descriptor<Pk> {
     /// Computes the Bitcoin address of the descriptor, if one exists
@@ -2236,5 +2271,32 @@ pk(03f28773c2d975288bc7d1d205c3748651b075fbc6610e58cddeeddf8f19405aa8))";
             .expect("infallible");
 
         assert_eq!(xonly_pk_descriptor.to_string(), xonly_converted_descriptor.to_string());
+    }
+
+    #[test]
+    fn test_iter_pk() {
+        let descriptor: Descriptor<String> = Descriptor::from_str("pkh(A)").unwrap();
+        assert_eq!(descriptor.iter_pk().collect::<Vec<String>>(), vec!["A".to_string()]);
+
+        let descriptor: Descriptor<String> = Descriptor::from_str("wpkh(A)").unwrap();
+        assert_eq!(descriptor.iter_pk().collect::<Vec<String>>(), vec!["A".to_string()]);
+
+        let descriptor: Descriptor<String> = Descriptor::from_str("tr(A,{pk(B),pk(C)})").unwrap();
+        assert_eq!(
+            descriptor.iter_pk().collect::<Vec<String>>(),
+            vec!["A".to_string(), "B".to_string(), "C".to_string()]
+        );
+
+        let descriptor: Descriptor<String> =
+            Descriptor::from_str("wsh(sortedmulti(2,A,B,C))").unwrap();
+        assert_eq!(
+            descriptor.iter_pk().collect::<Vec<String>>(),
+            vec!["A".to_string(), "B".to_string(), "C".to_string()]
+        );
+
+        let mut iter = descriptor.iter_pk();
+        while let Some(pk) = iter.next() {
+            println!("Current: {}, Remaining: {}", pk, iter.len());
+        }
     }
 }

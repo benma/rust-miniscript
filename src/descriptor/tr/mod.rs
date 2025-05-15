@@ -283,6 +283,11 @@ impl<Pk: MiniscriptKey> Tr<Pk> {
             Tr::new(translate.pk(&self.internal_key)?, tree).map_err(TranslateErr::OuterError)?;
         Ok(translate_desc)
     }
+
+    pub fn iter_pk(&self) -> impl Iterator<Item = Pk> + '_ {
+        core::iter::once(self.internal_key.clone())
+            .chain(self.leaves().flat_map(|leaf| leaf.miniscript().iter_pk()))
+    }
 }
 
 impl<Pk: MiniscriptKey + ToPublicKey> Tr<Pk> {
